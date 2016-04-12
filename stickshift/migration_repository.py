@@ -7,11 +7,11 @@ from ConfigParser import NoOptionError, NoSectionError
 DB_DIR = "db"
 DB_CONFIG_PATH = "db/database.ini"
 DB_CONFIG_FILE_CONTENTS = "[DATABASE]" \
-                          "\nhost: [DB_HOST]" \
-                          "\nport: [DB_PORT]" \
-                          "\nusername: [DB_USERNAME]" \
-                          "\npassword: [DB_PASSWORD]" \
-                          "\ndatabase: [DB_NAME]\n"
+                          "\nhost: DB_HOST" \
+                          "\nport: DB_PORT" \
+                          "\nusername: DB_USERNAME" \
+                          "\npassword: DB_PASSWORD" \
+                          "\ndatabase: DB_NAME\n"
 DB_UPGRADE_DIR = "db/upgrade"
 DB_DOWNGRADE_DIR = "db/downgrade"
 
@@ -22,10 +22,7 @@ def parse_environment_variable(text):
     return matches
 
 
-class MigrationRepository:
-
-    def __init__(self):
-        pass
+class MigrationRepository(object):
 
     @staticmethod
     def is_repository_setup():
@@ -36,8 +33,10 @@ class MigrationRepository:
         if MigrationRepository.is_repository_setup():
             shutil.rmtree(DB_DIR)
             print("Migration Repository cleared")
+            return True
         else:
             print("Migration Repository not setup")
+            return False
 
     @staticmethod
     def create_repository():
@@ -49,8 +48,10 @@ class MigrationRepository:
             config_file.write(DB_CONFIG_FILE_CONTENTS)
             config_file.close()
             print("Migration Repository created")
+            return True
         else:
             print("Migration Repository already setup")
+            return False
 
     @staticmethod
     def database_config(environment=None):
@@ -74,10 +75,6 @@ class MigrationRepository:
                 print("exception:{0} on {1}".format(optionError, option))
                 dict_map[option] = None
         return dict_map
-
-    @staticmethod
-    def migrate(database_manager=None):
-        pass
 
     @staticmethod
     def current_migration_count():
