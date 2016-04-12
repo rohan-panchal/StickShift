@@ -60,3 +60,7 @@ target/
 
 #Ipython Notebook
 .ipynb_checkpoints
+
+# Ignore IntelliJ files
+.idea/*
+StickShift.iml
