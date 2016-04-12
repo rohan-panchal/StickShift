@@ -64,3 +64,6 @@ target/
 # Ignore IntelliJ files
 .idea/*
 StickShift.iml
+
+# Ignore coverage files
+cover/*
