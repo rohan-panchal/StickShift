@@ -9,4 +9,6 @@ setup(name='StickShift',
       install_requires=['psycopg2==2.6.1', 'click==6.2', 'natsort==4.0.4'],
       packages=['stickshift'],
       entry_points={'console_scripts': ["stickshift=stickshift.shell:shell"]},
+      test_suite="nose.collector",
+      tests_require=["nose"]
       )
