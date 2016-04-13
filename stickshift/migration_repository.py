@@ -71,7 +71,7 @@ class MigrationRepository(object):
                 config_value = config.get(environment, option)
                 environment_values = parse_environment_variable(config_value)
                 if len(environment_values) > 0:
-                    config_value = os.environ[environment_values[0]]
+                    config_value = os.environ.get(environment_values[0], "")
                 dict_map[option] = config_value
             except NoSectionError as sectionError:
                 print("exception:{0} on {1}".format(sectionError, option))
