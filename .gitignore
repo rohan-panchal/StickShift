@@ -67,3 +67,6 @@ StickShift.iml
 
 # Ignore coverage files
 cover/*
+
+# Ignore db directory
+db/*

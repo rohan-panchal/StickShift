@@ -42,11 +42,23 @@ def new(sub_fn=None):
                 MigrationRepository.create_new_table_migration(name=new_name)
             elif new_type == "procedure":
                 MigrationRepository.create_new_procedure_migration(name=new_name)
+        else:
+            print("Migration is not setup")
+    else:
+        print("Invalid number of arguments")
 
 
 def alter(sub_fn=None):
     if len(sub_fn) > 1:
-        pass
+        if MigrationRepository.is_repository_setup():
+            table_name = sub_fn[0]
+            table_change = sub_fn[1]
+            migration_name = "{0}_{1}".format(table_name, table_change)
+            MigrationRepository.create_new_table_alteration_migration(name=migration_name)
+        else:
+            print("Migration is not setup")
+    else:
+        print("Invalid number of arguments")
 
 
 def database(sub_fn=None):
@@ -65,8 +77,8 @@ def database(sub_fn=None):
                     database_manager.list_database_current_version()
                 elif sub_fn[0] == "versions":
                     database_manager.list_database_versions()
-                elif sub_fn[0] == "functions":
-                    database_manager.list_functions()
+                elif sub_fn[0] == "procedures":
+                    database_manager.list_procedures()
                 elif sub_fn[0] == "tables":
                     database_manager.list_tables()
                 elif sub_fn[0] == "upgrade" or sub_fn[0] == "migrate":

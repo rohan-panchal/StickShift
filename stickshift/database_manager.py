@@ -71,13 +71,13 @@ class DatabaseManager:
             print("{0}".format(migration))
         print("----------")
 
-    def list_functions(self):
+    def list_procedures(self):
         functions = self.execute_fetch(QUERY_LIST_FUNCTIONS)
         print("\nFUNCTIONS")
+        print("\nPROCEDURES")
         print("---------")
         for function in functions:
             print("{0}".format(function))
-        print("---------\n")
 
     def list_tables(self):
         tables = self.execute_fetch(QUERY_LIST_TABLES)

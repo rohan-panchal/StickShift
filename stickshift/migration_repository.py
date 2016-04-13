@@ -125,10 +125,10 @@ class MigrationRepository(object):
         if name:
             migration_count = MigrationRepository.current_migration_count()
             MigrationRepository.create_migration(name="create_sp_{0}".format(name),
-                                                 contents="CREATE FUNCTION sp_{0} \n(\n\n) \n\nRETURNS RETURN_TYPE \n(\n) AS $$ "
+                                                 contents="CREATE OR REPLACE FUNCTION sp_{0} \n(\n\n) \n\nRETURNS RETURN_TYPE \n(\n) AS $$ "
                                                           "\n\nBEGIN \n\nEND; $$ LANGUAGE plpgsql;".format(name),
                                                  migration_index=migration_count)
-            MigrationRepository.create_migration(name="drop_table_{0}".format(name),
+            MigrationRepository.create_migration(name="drop_sp_{0}".format(name),
                                                  contents="DROP FUNCTION IF EXISTS sp_{0};".format(name),
                                                  directory=DB_DOWNGRADE_DIR,
                                                  migration_index=migration_count)
