@@ -1,8 +1,13 @@
 import os
+import sys
 import shutil
-import ConfigParser
 from natsort import natsorted
-from ConfigParser import NoOptionError, NoSectionError
+
+python_version = sys.version_info.major
+if python_version == 3:
+    from configparser import ConfigParser, NoOptionError, NoSectionError
+else:
+    from ConfigParser import ConfigParser, NoOptionError, NoSectionError
 
 DB_DIR = "db"
 DB_CONFIG_PATH = "db/database.ini"
@@ -55,7 +60,7 @@ class MigrationRepository(object):
 
     @staticmethod
     def database_config(environment=None):
-        config = ConfigParser.ConfigParser()
+        config = ConfigParser()
         config.read(DB_CONFIG_PATH)
         if environment is None:
             return None

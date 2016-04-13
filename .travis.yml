@@ -1,0 +1,17 @@
+language: python
+python:
+  - "2.7"
+  - "3.2"
+  - "3.3"
+  - "3.4"
+  - "3.5"
+
+install: "pip install -r requirements.txt"
+
+script: "nosetests -v --with-coverage --cover-erase --cover-package=stickshift --cover-xml --cover-html"
+
+before_install:
+  - pip install codecov
+
+after_success:
+  - codecov

@@ -77,9 +77,9 @@ def test_database_config():
 
     MigrationRepository.create_repository()
     config = MigrationRepository.database_config("DATABASE")
-    assert(cmp(config, {
+    assert(config == {
         "host": "DB_HOST",
         "port": "DB_PORT",
         "username": "DB_USERNAME",
         "password": "DB_PASSWORD",
-        "database": "DB_NAME"}) == 0)
+        "database": "DB_NAME"})
