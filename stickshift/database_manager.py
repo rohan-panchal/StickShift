@@ -1,15 +1,40 @@
 import psycopg2
-from database_queries import create_table_drop_query,\
-    query_function_drop_command, \
-    QUERY_LIST_FUNCTIONS, \
-    QUERY_LIST_TABLES, \
-    QUERY_CREATE_MIGRATION_TABLE, \
-    QUERY_DROP_MIGRATION_TABLE, \
-    QUERY_DATABASE_MIGRATIONS_TABLE_EXISTS, \
-    QUERY_DATABASE_CURRENT_VERSION, \
-    QUERY_DATABASE_INSERT_MIGRATION, \
-    QUERY_DATABASE_DELETE_MIGRATION, \
-    QUERY_DATABASE_MIGRATION_VERSIONS
+
+
+def create_table_drop_query(table_name):
+    return "DROP TABLE IF EXISTS {0} CASCADE;".format(table_name)
+
+
+QUERY_LIST_FUNCTIONS = "SELECT routine_name " \
+                       "FROM information_schema.routines " \
+                       "WHERE routine_type='FUNCTION' " \
+                       "AND specific_schema='public';"
+
+QUERY_LIST_TABLES = "SELECT table_name " \
+                    "FROM information_schema.tables " \
+                    "WHERE table_schema = 'public';"
+
+QUERY_CREATE_MIGRATION_TABLE = 'CREATE TABLE IF NOT EXISTS "version_migration" ' \
+                               '(version INTEGER, migrated_at INTEGER DEFAULT EXTRACT(EPOCH FROM CURRENT_TIMESTAMP));'
+
+QUERY_DROP_MIGRATION_TABLE = 'DROP TABLE IF EXISTS "version_migration";'
+
+QUERY_DATABASE_MIGRATIONS_TABLE_EXISTS = "SELECT EXISTS (" \
+                                         "SELECT 1 " \
+                                         "FROM information_schema.tables " \
+                                         "WHERE table_schema = 'public' AND table_name = 'version_migration'" \
+                                         ");"
+QUERY_DATABASE_CURRENT_VERSION = "SELECT MAX(version) FROM version_migration"
+
+QUERY_DATABASE_INSERT_MIGRATION = "INSERT INTO version_migration(version) VALUES({0});"
+
+QUERY_DATABASE_DELETE_MIGRATION = "DELETE FROM version_migration WHERE version = {0};"
+
+QUERY_DATABASE_MIGRATION_VERSIONS = "SELECT * FROM version_migration;"
+
+QUERY_RESET_DATABASE_MIGRATION_TABLE = create_table_drop_query("version_migration")
+
+from stickshift.migration_repository import find_migration_index
 
 
 class DatabaseManager:
@@ -28,15 +53,18 @@ class DatabaseManager:
             self.connection.autocommit = True
 
     def provision_database(self):
-        self.execute_create(QUERY_CREATE_MIGRATION_TABLE)
-        print("Database provisioned")
+        if self.is_database_provisioned():
+            return False
+        else :
+            self.execute_create(QUERY_CREATE_MIGRATION_TABLE)
+            return True
 
     def deprovision_database(self):
         if self.is_database_provisioned():
             self.execute_create(QUERY_DROP_MIGRATION_TABLE)
-            print("Database deprovisioned")
+            return True
         else:
-            print("Database is not provisioned")
+            return False
 
     def is_database_provisioned(self):
         result = self.execute_fetch(QUERY_DATABASE_MIGRATIONS_TABLE_EXISTS)
@@ -46,36 +74,14 @@ class DatabaseManager:
         result = self.execute_fetch(QUERY_DATABASE_CURRENT_VERSION)
         return result[0]
 
-    def list_database_current_version(self):
-        if self.is_database_provisioned():
-            version = self.execute_fetch(QUERY_DATABASE_CURRENT_VERSION)
-            print("Current Database Version:{0}".format(version[0]))
-        else:
-            print("Database is not provisioned")
-
     def list_migrations(self):
-        migrations = self.migration_repository.current_migrations_list()
-        print("\nMIGRATIONS")
-        print("----------")
-        for migration in migrations:
-            print("{0}".format(migration))
-        print("----------")
+        return self.migration_repository.current_migrations_list()
 
     def list_procedures(self):
-        functions = self.execute_fetch(QUERY_LIST_FUNCTIONS)
-        print("\nPROCEDURES")
-        print("---------")
-        for function in functions:
-            print("{0}".format(function))
-        print("---------")
+        return self.execute_fetch(QUERY_LIST_FUNCTIONS)
 
     def list_tables(self):
-        tables = self.execute_fetch(QUERY_LIST_TABLES)
-        print("\nTABLES")
-        print("------")
-        for table in tables:
-            print("{0}".format(table))
-        print("---------\n")
+        return self.execute_fetch(QUERY_LIST_TABLES)
 
     def execute_create(self, query=None):
         if query is not None:
@@ -96,7 +102,7 @@ class DatabaseManager:
             migration_list = migration_list[(current_migration_version+1):]
         for idx, migration_file_name in enumerate(migration_list):
             self.execute_migration(migration_file_name=migration_file_name,
-                                   version_index=self.find_migration_index(migration_file_name))
+                                   version_index=find_migration_index(migration_file_name))
 
     def upgrade(self):
         migration_list = self.migration_repository.current_migrations_list()
@@ -105,7 +111,7 @@ class DatabaseManager:
             migration_list = migration_list[(current_migration_version+1):]
         next_migration = migration_list[0]
         self.execute_migration(migration_file_name=next_migration,
-                               version_index=self.find_migration_index(migration_file_name=next_migration))
+                               version_index=find_migration_index(migration_file_name=next_migration))
 
     def reset(self, limit=0):
         downgrade_list = self.migration_repository.current_downgrade_list()
@@ -118,7 +124,7 @@ class DatabaseManager:
         downgrade_list.reverse()
         for idx, migration_file_name in enumerate(downgrade_list):
             self.execute_downgrade(migration_file_name=migration_file_name,
-                                   version_index=self.find_migration_index(migration_file_name))
+                                   version_index=find_migration_index(migration_file_name))
 
     def downgrade(self):
         downgrade_list = self.migration_repository.current_downgrade_list()
@@ -127,15 +133,12 @@ class DatabaseManager:
         if current_migration_version is not None:
             downgrade_list = downgrade_list[0:limit+1]
         else:
-            return
+            return False
         downgrade_list.reverse()
         next_migration = downgrade_list[0]
         self.execute_downgrade(migration_file_name=next_migration,
-                               version_index=self.find_migration_index(migration_file_name=next_migration))
-
-    def find_migration_index(self, migration_file_name):
-        underscore_index = migration_file_name.index("_")
-        return migration_file_name[1:underscore_index]
+                               version_index=find_migration_index(migration_file_name=next_migration))
+        return True
 
     def execute_migration(self,
                           migration_file_name=None,

@@ -12,13 +12,18 @@ else:
 DB_DIR = "db"
 DB_CONFIG_PATH = "db/database.ini"
 DB_CONFIG_FILE_CONTENTS = "[DATABASE]" \
-                          "\nhost: DB_HOST" \
-                          "\nport: DB_PORT" \
-                          "\nusername: DB_USERNAME" \
-                          "\npassword: DB_PASSWORD" \
-                          "\ndatabase: DB_NAME\n"
+                          "\nhost: [DB_HOST]" \
+                          "\nport: [DB_PORT]" \
+                          "\nusername: [DB_USERNAME]" \
+                          "\npassword: [DB_PASSWORD]" \
+                          "\ndatabase: [DB_NAME]\n"
 DB_UPGRADE_DIR = "db/upgrade"
 DB_DOWNGRADE_DIR = "db/downgrade"
+
+
+def find_migration_index(migration_file_name):
+    underscore_index = migration_file_name.index("_")
+    return migration_file_name[1:underscore_index]
 
 
 def parse_environment_variable(text):

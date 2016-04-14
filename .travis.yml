@@ -6,6 +6,15 @@ python:
   - "3.4"
   - "3.5"
 
+services:
+  - postgresql
+
+before_script:
+  - psql -c 'create database stickshift_test;' -U postgres
+
+env:
+  - DB_HOST=localhost DB_PORT=5432 DB_USERNAME=postgres DB_NAME=stickshift_test
+
 install: "pip install -r requirements.txt"
 
 script: "nosetests -v --with-coverage --cover-erase --cover-package=stickshift --cover-xml --cover-html"
