@@ -53,17 +53,6 @@ class DatabaseManager:
         else:
             print("Database is not provisioned")
 
-    def list_database_versions(self):
-        if self.is_database_provisioned():
-            versions = self.execute_fetch(QUERY_DATABASE_MIGRATION_VERSIONS)
-            print("\nVERSIONS")
-            print("--------")
-            for version in versions:
-                print({"{0}".format(version)})
-            print("--------")
-        else:
-            print("Database is not provisioned")
-
     def list_migrations(self):
         migrations = self.migration_repository.current_migrations_list()
         print("\nMIGRATIONS")
@@ -100,7 +89,7 @@ class DatabaseManager:
                 results = [row[0] for row in cursor]
                 return results
 
-    def upgrade(self):
+    def migrate(self):
         migration_list = self.migration_repository.current_migrations_list()
         current_migration_version = self.current_database_migration_version()
         if current_migration_version is not None:
@@ -109,7 +98,16 @@ class DatabaseManager:
             self.execute_migration(migration_file_name=migration_file_name,
                                    version_index=self.find_migration_index(migration_file_name))
 
-    def downgrade(self, limit=0):
+    def upgrade(self):
+        migration_list = self.migration_repository.current_migrations_list()
+        current_migration_version = self.current_database_migration_version()
+        if current_migration_version is not None:
+            migration_list = migration_list[(current_migration_version+1):]
+        next_migration = migration_list[0]
+        self.execute_migration(migration_file_name=next_migration,
+                               version_index=self.find_migration_index(migration_file_name=next_migration))
+
+    def reset(self, limit=0):
         downgrade_list = self.migration_repository.current_downgrade_list()
         current_migration_version = self.current_database_migration_version()
         limit = current_migration_version
@@ -122,14 +120,18 @@ class DatabaseManager:
             self.execute_downgrade(migration_file_name=migration_file_name,
                                    version_index=self.find_migration_index(migration_file_name))
 
-    def reset(self):
-        with self.connection.cursor() as cursor:
-            print("RESETING DATABASE")
-            print("--------")
-            print("DOWNGRADING DATABASE")
-            self.downgrade()
-            self.deprovision_database()
-            print("--------")
+    def downgrade(self):
+        downgrade_list = self.migration_repository.current_downgrade_list()
+        current_migration_version = self.current_database_migration_version()
+        limit = current_migration_version
+        if current_migration_version is not None:
+            downgrade_list = downgrade_list[0:limit+1]
+        else:
+            return
+        downgrade_list.reverse()
+        next_migration = downgrade_list[0]
+        self.execute_downgrade(migration_file_name=next_migration,
+                               version_index=self.find_migration_index(migration_file_name=next_migration))
 
     def find_migration_index(self, migration_file_name):
         underscore_index = migration_file_name.index("_")

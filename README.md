@@ -4,6 +4,8 @@
 # StickShift
 A Database Migration tool using SQL files as change scripts.
 
+**Note:** This is currently in pre-release development where changes are likely to be breaking and so it is not recommended that this is used in production code where the CLI interface is expected to be consistent.
+
 # Supports
 
 | Python |
@@ -225,6 +227,7 @@ DROP FUNCION IF EXISTS sp_insert_user;
 ```
 
 # Executing Migration Scripts
+
 ## Migrating
 To migrate the database to the most current version you execute the command:
 
@@ -236,14 +239,35 @@ Where:
 
 *Prerequisite:* The migration repository must be setup, and the database must be provisioned.
 
-## Downgrading
+## Upgrading
+To incrementally upgrade the database to the next migration in the migration repository you execute the command:
+
+`stickshift db upgrade <environment>`
+
+Where:
+
+*  `<environment>` is the name of the environment you'd like to migrate.
+
+*Prerequisite:* The migration repository must be setup, and the database must be provisioned.
+
+## Reseting
 To undo all database migrations you execute the command:
 
-`stickshift db downgrade <environment>`
+`stickshift db reset <environment>`
 
 Where:
 
 *  `<environment>` is the name of the environment you'd like to downgrade.
+
+## Downgrading
+To ingrementally downgrade the database to the previous migration in the migration repository you execute the command:
+`stickshift db downgrade <environment>`
+
+Where:
+
+*  `<environment>` is the name of the environment you'd like to migrate.
+
+*Prerequisite:* The migration repository must be setup, and the database must be provisioned.
 
 # Fetch Information
 ## Version
@@ -294,11 +318,11 @@ Where:
 |      +-- provision
 |      +-- deprovision
 |      +-- version
-|      +-- versions
 |      +-- procedures
 |      +-- tables
+|      +-- migrate
+|      +-- reset
 |      +-- upgrade
 |      +-- downgrade
-|      +-- reset
 +
 ```
