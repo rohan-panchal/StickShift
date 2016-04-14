@@ -29,41 +29,56 @@ def parse_environment_variable(text):
 
 class MigrationRepository(object):
 
-    @staticmethod
-    def is_repository_setup():
-        return os.path.exists(DB_DIR)
+    def __init__(self, directory=None):
+        self.directory = directory
 
-    @staticmethod
-    def clear():
-        if MigrationRepository.is_repository_setup():
-            shutil.rmtree(DB_DIR)
-            print("Migration Repository cleared")
+    def repository_path(self):
+        return self.path_for_directory_at_root_directory(path=DB_DIR)
+
+    def repository_upgrade_path(self):
+        return self.path_for_directory_at_root_directory(path=DB_UPGRADE_DIR)
+
+    def repository_downgrade_path(self):
+        return self.path_for_directory_at_root_directory(path=DB_DOWNGRADE_DIR)
+
+    def repository_database_config_path(self):
+        return self.path_for_directory_at_root_directory(path=DB_CONFIG_PATH)
+
+    def path_for_directory_at_root_directory(self, path):
+        if self.directory:
+            path = '/'.join([self.directory, path])
+        return path
+
+    def is_repository_setup(self):
+        return os.path.exists(self.repository_path())
+
+    def clear(self):
+        if self.is_repository_setup():
+            shutil.rmtree(self.repository_path())
             return True
         else:
-            print("Migration Repository not setup")
             return False
 
-    @staticmethod
-    def create_repository():
-        if not MigrationRepository.is_repository_setup():
-            os.mkdir(DB_DIR)
-            os.mkdir(DB_UPGRADE_DIR)
-            os.mkdir(DB_DOWNGRADE_DIR)
-            config_file = open(DB_CONFIG_PATH, 'a')
-            config_file.write(DB_CONFIG_FILE_CONTENTS)
-            config_file.close()
-            print("Migration Repository created")
+    def create_repository(self):
+        if not self.is_repository_setup():
+            os.mkdir(self.repository_path())
+            os.mkdir(self.repository_upgrade_path())
+            os.mkdir(self.repository_downgrade_path())
+
+            with open(self.repository_database_config_path(), 'a') as config_file:
+                config_file.write(DB_CONFIG_FILE_CONTENTS)
+
             return True
         else:
-            print("Migration Repository already setup")
             return False
 
-    @staticmethod
-    def database_config(environment=None):
-        config = ConfigParser()
-        config.read(DB_CONFIG_PATH)
+    def database_config(self, environment=None):
         if environment is None:
             return None
+
+        config = ConfigParser()
+        config.read(self.repository_database_config_path())
+
         database_map = config.options(environment)
         dict_map = {}
         for option in database_map:
@@ -81,62 +96,59 @@ class MigrationRepository(object):
                 dict_map[option] = None
         return dict_map
 
-    @staticmethod
-    def current_migration_count():
-        return len(MigrationRepository.current_migrations_list())
+    def current_migration_count(self):
+        return len(self.current_migrations_list())
 
-    @staticmethod
-    def current_downgrade_count():
-        return len(MigrationRepository.current_downgrade_list())
+    def current_downgrade_count(self):
+        return len(self.current_downgrade_list())
 
-    @staticmethod
-    def current_migrations_list():
-        return natsorted(os.listdir(DB_UPGRADE_DIR))
+    def current_migrations_list(self):
+        return natsorted(os.listdir(self.repository_upgrade_path()))
 
-    @staticmethod
-    def current_downgrade_list():
-        return natsorted(os.listdir(DB_DOWNGRADE_DIR))
+    def current_downgrade_list(self):
+        return natsorted(os.listdir(self.repository_downgrade_path()))
 
-    @staticmethod
-    def create_new_table_migration(name=None):
+    def create_new_table_migration(self, name=None):
         if name:
-            migration_count = MigrationRepository.current_migration_count()
-            MigrationRepository.create_migration(name="create_table_{0}".format(name),
-                                                 contents="CREATE TABLE IF NOT EXISTS {0} ()".format(name),
-                                                 migration_index=migration_count)
-            MigrationRepository.create_migration(name="drop_table_{0}".format(name),
-                                                 contents="DROP TABLE IF EXISTS {0} CASCADE;".format(name),
-                                                 directory=DB_DOWNGRADE_DIR,
-                                                 migration_index=migration_count)
+            migration_count = self.current_migration_count()
+            self.create_migration(name="create_table_{0}".format(name),
+                                  directory=self.repository_upgrade_path(),
+                                  contents="CREATE TABLE IF NOT EXISTS {0} ()".format(name),
+                                  migration_index=migration_count)
+            self.create_migration(name="drop_table_{0}".format(name),
+                                  directory=self.repository_downgrade_path(),
+                                  contents="DROP TABLE IF EXISTS {0} CASCADE;".format(name),
+                                  migration_index=migration_count)
 
-    @staticmethod
-    def create_new_table_alteration_migration(name=None):
+    def create_new_table_alteration_migration(self, name=None):
         if name:
-            migration_count = MigrationRepository.current_migration_count()
-            MigrationRepository.create_migration(name="alter_table_{0}".format(name),
-                                                 contents="/* Insert Table Alter statements here*/",
-                                                 migration_index=migration_count)
-            MigrationRepository.create_migration(name="undo_alter_table_{0}".format(name),
-                                                 directory=DB_DOWNGRADE_DIR,
-                                                 migration_index=migration_count)
+            migration_count = self.current_migration_count()
+            self.create_migration(name="alter_table_{0}".format(name),
+                                  directory=self.repository_upgrade_path(),
+                                  contents="/* Insert Table Alter statements here*/",
+                                  migration_index=migration_count)
+            self.create_migration(name="undo_alter_table_{0}".format(name),
+                                  directory=self.repository_downgrade_path(),
+                                  contents="/* Insert Table Alter statements here*/",
+                                  migration_index=migration_count)
 
-    @staticmethod
-    def create_new_procedure_migration(name=None):
+    def create_new_procedure_migration(self, name=None):
         if name:
-            migration_count = MigrationRepository.current_migration_count()
-            MigrationRepository.create_migration(name="create_sp_{0}".format(name),
-                                                 contents="CREATE OR REPLACE FUNCTION sp_{0} \n(\n\n) \n\nRETURNS RETURN_TYPE \n(\n) AS $$ "
-                                                          "\n\nBEGIN \n\nEND; $$ LANGUAGE plpgsql;".format(name),
-                                                 migration_index=migration_count)
-            MigrationRepository.create_migration(name="drop_sp_{0}".format(name),
-                                                 contents="DROP FUNCTION IF EXISTS sp_{0};".format(name),
-                                                 directory=DB_DOWNGRADE_DIR,
-                                                 migration_index=migration_count)
+            migration_count = self.current_migration_count()
+            self.create_migration(name="create_sp_{0}".format(name),
+                                  directory=self.repository_upgrade_path(),
+                                  contents="CREATE OR REPLACE FUNCTION sp_{0} \n(\n\n) \n\nRETURNS RETURN_TYPE \n(\n) AS $$ "
+                                           "\n\nBEGIN \n\nEND; $$ LANGUAGE plpgsql;".format(name),
+                                  migration_index=migration_count)
+            self.create_migration(name="drop_sp_{0}".format(name),
+                                  directory=self.repository_downgrade_path(),
+                                  contents="DROP FUNCTION IF EXISTS sp_{0};".format(name),
+                                  migration_index=migration_count)
 
-    @staticmethod
-    def create_migration(name=None,
-                         contents=None,
-                         directory=DB_UPGRADE_DIR,
+    def create_migration(self,
+                         directory,
+                         name,
+                         contents,
                          migration_index=0):
         if migration_index< 10:
             migration_prefix = "V0{0}__".format(migration_index)

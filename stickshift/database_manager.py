@@ -1,5 +1,4 @@
 import psycopg2
-from migration_repository import MigrationRepository, DB_UPGRADE_DIR, DB_DOWNGRADE_DIR
 from database_queries import create_table_drop_query,\
     query_function_drop_command, \
     QUERY_LIST_FUNCTIONS, \
@@ -15,15 +14,17 @@ from database_queries import create_table_drop_query,\
 
 class DatabaseManager:
 
-    def __init__(self, database_config=None):
-        self.database_config = database_config
+    def __init__(self, migration_repository, environment):
+        self.migration_repository = migration_repository
+        self.environment = environment
+        self.database_config = migration_repository.database_config(self.environment)
         self.connection = None
-        if database_config is not None:
-            self.connection = psycopg2.connect(host=database_config["host"],
-                                               port=database_config["port"],
-                                               user=database_config["username"],
-                                               password=database_config["password"],
-                                               database=database_config["database"])
+        if self.database_config is not None:
+            self.connection = psycopg2.connect(host=self.database_config["host"],
+                                               port=self.database_config["port"],
+                                               user=self.database_config["username"],
+                                               password=self.database_config["password"],
+                                               database=self.database_config["database"])
             self.connection.autocommit = True
 
     def provision_database(self):
@@ -64,7 +65,7 @@ class DatabaseManager:
             print("Database is not provisioned")
 
     def list_migrations(self):
-        migrations = MigrationRepository.current_migrations_list()
+        migrations = self.migration_repository.current_migrations_list()
         print("\nMIGRATIONS")
         print("----------")
         for migration in migrations:
@@ -73,11 +74,11 @@ class DatabaseManager:
 
     def list_procedures(self):
         functions = self.execute_fetch(QUERY_LIST_FUNCTIONS)
-        print("\nFUNCTIONS")
         print("\nPROCEDURES")
         print("---------")
         for function in functions:
             print("{0}".format(function))
+        print("---------")
 
     def list_tables(self):
         tables = self.execute_fetch(QUERY_LIST_TABLES)
@@ -100,9 +101,8 @@ class DatabaseManager:
                 return results
 
     def upgrade(self):
-        migration_list = MigrationRepository.current_migrations_list()
+        migration_list = self.migration_repository.current_migrations_list()
         current_migration_version = self.current_database_migration_version()
-        print("Current Migration:{0}".format(current_migration_version))
         if current_migration_version is not None:
             migration_list = migration_list[(current_migration_version+1):]
         for idx, migration_file_name in enumerate(migration_list):
@@ -110,9 +110,8 @@ class DatabaseManager:
                                    version_index=self.find_migration_index(migration_file_name))
 
     def downgrade(self, limit=0):
-        downgrade_list = MigrationRepository.current_downgrade_list()
+        downgrade_list = self.migration_repository.current_downgrade_list()
         current_migration_version = self.current_database_migration_version()
-        print("Current Database Version: {0}".format(current_migration_version))
         limit = current_migration_version
         if current_migration_version is not None:
             downgrade_list = downgrade_list[0:limit+1]
@@ -125,31 +124,11 @@ class DatabaseManager:
 
     def reset(self):
         with self.connection.cursor() as cursor:
-            tables_reset = False
-            functions_reset = False
-            print("--------")
             print("RESETING DATABASE")
-            tables = self.execute_fetch(QUERY_LIST_TABLES)
-            if len(tables) > 0:
-                print("DROPPING {0} TABLES".format(len(tables)))
-                for table in tables:
-                    cursor.execute(create_table_drop_query(table))
-                    print("TABLE:{0} dropped".format(table))
-                tables_reset = True
-                print("TABLES DROPPED")
-            procedures = self.execute_fetch(QUERY_LIST_FUNCTIONS)
-            if len(procedures) > 0:
-                print("DROPPING {0} PROCEDURES".format(len(procedures)))
-                for procedure in procedures:
-                    cursor.execute(query_function_drop_command(procedure))
-                    result = cursor.fetchone()[0]
-                    cursor.execute(result)
-                    print("PROCEDURE:{0} dropped".format(procedure))
-                functions_reset = True
-                print("PROCEDURES DROPPED")
+            print("--------")
+            print("DOWNGRADING DATABASE")
+            self.downgrade()
             self.deprovision_database()
-            if tables_reset is True or functions_reset is True:
-                print("DATABASE RESET")
             print("--------")
 
     def find_migration_index(self, migration_file_name):
@@ -160,7 +139,7 @@ class DatabaseManager:
                           migration_file_name=None,
                           version_index=None):
         with self.connection.cursor() as cursor:
-            cursor.execute(open(DB_UPGRADE_DIR + "/" + migration_file_name, "r").read())
+            cursor.execute(open(self.migration_repository.repository_upgrade_path() + "/" + migration_file_name, "r").read())
             cursor.execute(QUERY_DATABASE_INSERT_MIGRATION.format(version_index))
             print("Migration:{0} completed".format(migration_file_name))
 
@@ -168,6 +147,6 @@ class DatabaseManager:
                           migration_file_name=None,
                           version_index=None):
         with self.connection.cursor() as cursor:
-            cursor.execute(open(DB_DOWNGRADE_DIR + "/" + migration_file_name, "r").read())
+            cursor.execute(open(self.migration_repository.repository_downgrade_path() + "/" + migration_file_name, "r").read())
             cursor.execute(QUERY_DATABASE_DELETE_MIGRATION.format(version_index))
             print("Downgrade:{0} completed".format(migration_file_name))

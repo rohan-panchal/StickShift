@@ -272,3 +272,33 @@ To list the current stored procedures in the specific database environment execu
 Where:
 
 *  `<environment>` is the name of the environment you'd like to fetch the current version from.
+
+
+# Command Graph
+
+```
++-- stickshift
+|   +-- --help
+|
+|   +-- setup
+|   +-- clear
+|   +-- new
+|      +-- table
+|         +-- <name>
+|      +-- procedure
+|         +-- <name>
+|   +-- alter
+|      +-- <tablename>
+|         +-- <tablechange>
+|   +-- db
+|      +-- provision
+|      +-- deprovision
+|      +-- version
+|      +-- versions
+|      +-- procedures
+|      +-- tables
+|      +-- upgrade
+|      +-- downgrade
+|      +-- reset
++
+```
