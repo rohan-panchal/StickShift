@@ -1,7 +1,7 @@
 from setuptools import setup
 
 setup(name='StickShift',
-      version='0.1.2',
+      version='0.1.3',
       description='Database migration tool using raw sql files',
       author='Rohan Panchal',
       author_email='rohan@rohanpanchal.com',
