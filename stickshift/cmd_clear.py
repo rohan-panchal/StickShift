@@ -1,6 +1,11 @@
 import click
 
-from shell import pass_context
+try:
+    from stickshift.shell import pass_context
+    from stickshift.cli_strings import CLIStrings
+except ImportError:
+    from shell import pass_context
+    from cli_strings import CLIStrings
 
 
 @click.command('clear', short_help='Clears out a repo.')
@@ -8,6 +13,6 @@ from shell import pass_context
 def cli(ctx):
 
     if ctx.repository().clear():
-        ctx.log("Migration Repository cleared")
+        ctx.log(CLIStrings.DB_MIGRATION_REPOSITORY_CLEARED)
     else:
-        ctx.log("Migration Repository doesn't exist at that directory")
+        ctx.log(CLIStrings.DB_MIGRATION_REPOSITORY_DOESNT_EXIST_AT_DIRECTORY)

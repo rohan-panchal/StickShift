@@ -1,5 +1,10 @@
 import psycopg2
 
+try:
+    from stickshift.migration_repository import find_migration_index
+except ImportError:
+    from migration_repository import find_migration_index
+
 
 def create_table_drop_query(table_name):
     return "DROP TABLE IF EXISTS {0} CASCADE;".format(table_name)
@@ -33,8 +38,6 @@ QUERY_DATABASE_DELETE_MIGRATION = "DELETE FROM version_migration WHERE version =
 QUERY_DATABASE_MIGRATION_VERSIONS = "SELECT * FROM version_migration;"
 
 QUERY_RESET_DATABASE_MIGRATION_TABLE = create_table_drop_query("version_migration")
-
-from stickshift.migration_repository import find_migration_index
 
 
 class DatabaseManager:

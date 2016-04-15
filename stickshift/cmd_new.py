@@ -1,6 +1,11 @@
 import click
 
-from shell import pass_context
+try:
+    from stickshift.shell import pass_context
+    from stickshift.cli_strings import CLIStrings
+except ImportError:
+    from shell import pass_context
+    from cli_strings import CLIStrings
 
 
 @click.command('new', short_help='Creates a migration script for creating a new table or procedure')
@@ -15,4 +20,4 @@ def cli(ctx, type, name):
         elif type == "procedure":
             ctx.repository().create_new_procedure_migration(name)
     else:
-        print("Migration Repository must be setup before creating migration scripts")
+        print(CLIStrings.DB_MIGRATION_REPOSITORY_MUST_BE_SETUP)

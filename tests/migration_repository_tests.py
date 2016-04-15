@@ -1,9 +1,9 @@
 import unittest
 
-from stickshift.migration_repository import MigrationRepository, find_migration_index
+from stickshift.migration_repository import MigrationRepository, InvalidEnvironmentError, InvalidDatabaseFieldError, find_migration_index
 
 
-class MigratinRepositoryTests(unittest.TestCase):
+class MigrationRepositoryTests(unittest.TestCase):
 
     def setUp(self):
         self.migration_repository = MigrationRepository()
@@ -54,7 +54,6 @@ class MigratinRepositoryTests(unittest.TestCase):
     def test_migration_list(self):
         self.migration_repository.create_repository()
         self.migration_repository.create_new_table_migration("test")
-        print(self.migration_repository.current_migrations_list())
         assert(self.migration_repository.current_migrations_list() == ["V00__create_table_test.sql"])
 
     def test_create_migration_double_digit_indexes(self):
@@ -66,3 +65,14 @@ class MigratinRepositoryTests(unittest.TestCase):
     def test_path_for_directory_at_root_directory_with_custom_directory(self):
         custom_migration_repository = MigrationRepository(directory="custom")
         assert(custom_migration_repository.path_for_directory_at_root_directory("foo") == "custom/foo")
+
+    def test_database_config_when_environment_is_none(self):
+        assert(self.migration_repository.database_config() is None)
+
+    def test_database_config_with_invalid_environment(self):
+        self.migration_repository.create_repository()
+        self.failUnlessRaises(InvalidEnvironmentError, self.migration_repository.database_config, environment="INVALID")
+
+    def test_database_config_with_invalid_database_fields(self):
+        self.migration_repository.create_repository()
+        self.failUnlessRaises(InvalidDatabaseFieldError, self.migration_repository.database_config, environment="DATABASE", database_fields=["invalid"])

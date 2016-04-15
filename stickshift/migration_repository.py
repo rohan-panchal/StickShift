@@ -1,7 +1,7 @@
 import os
 import sys
 import shutil
-from natsort import natsorted
+import natsort
 
 python_version = sys.version_info.major
 if python_version == 3:
@@ -20,6 +20,8 @@ DB_CONFIG_FILE_CONTENTS = "[DATABASE]" \
 DB_UPGRADE_DIR = "db/upgrade"
 DB_DOWNGRADE_DIR = "db/downgrade"
 
+DB_MAP_OPTIONS = ["host", "port", "username", "password", "database"]
+
 
 def find_migration_index(migration_file_name):
     underscore_index = migration_file_name.index("_")
@@ -30,6 +32,14 @@ def parse_environment_variable(text):
     import re
     matches = re.findall(r'\[(.*?)\]', text)
     return matches
+
+
+class InvalidEnvironmentError(Exception):
+    pass
+
+
+class InvalidDatabaseFieldError(Exception):
+    pass
 
 
 class MigrationRepository(object):
@@ -77,28 +87,26 @@ class MigrationRepository(object):
         else:
             return False
 
-    def database_config(self, environment=None):
+    def database_config(self, environment=None, database_fields=DB_MAP_OPTIONS):
         if environment is None:
             return None
 
         config = ConfigParser()
         config.read(self.repository_database_config_path())
 
-        database_map = config.options(environment)
         dict_map = {}
-        for option in database_map:
+        for option in database_fields:
             try:
                 config_value = config.get(environment, option)
                 environment_values = parse_environment_variable(config_value)
                 if len(environment_values) > 0:
                     config_value = os.environ.get(environment_values[0], "")
                 dict_map[option] = config_value
-            except NoSectionError as sectionError:
-                print("exception:{0} on {1}".format(sectionError, option))
-                dict_map[option] = None
-            except NoOptionError as optionError:
-                print("exception:{0} on {1}".format(optionError, option))
-                dict_map[option] = None
+            except NoSectionError:
+                raise InvalidEnvironmentError("{0} is not a validly declared environment".format(environment))
+            except NoOptionError:
+                raise InvalidDatabaseFieldError("{0} is not a valid database field. \n"
+                                                "Either add it to the database.ini file or see if its a valid field.".format(option))
         return dict_map
 
     def current_migration_count(self):
@@ -108,10 +116,10 @@ class MigrationRepository(object):
         return len(self.current_downgrade_list())
 
     def current_migrations_list(self):
-        return natsorted(os.listdir(self.repository_upgrade_path()))
+        return natsort.natsorted(os.listdir(self.repository_upgrade_path()))
 
     def current_downgrade_list(self):
-        return natsorted(os.listdir(self.repository_downgrade_path()))
+        return natsort.natsorted(os.listdir(self.repository_downgrade_path()))
 
     def create_new_table_migration(self, name=None):
         if name:
@@ -155,7 +163,7 @@ class MigrationRepository(object):
                          name,
                          contents,
                          migration_index=0):
-        if migration_index< 10:
+        if migration_index < 10:
             migration_prefix = "V0{0}__".format(migration_index)
         else:
             migration_prefix = "V{0}__".format(migration_index)

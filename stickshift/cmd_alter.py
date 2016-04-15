@@ -1,6 +1,9 @@
 import click
 
-from shell import pass_context
+try:
+    from stickshift.shell import pass_context
+except ImportError:
+    from shell import pass_context
 
 
 @click.command('new', short_help='Creates a migration script for creating a new table or procedure')
@@ -12,4 +15,4 @@ def cli(ctx, tablename, tablechange):
     if ctx.repository().is_repository_setup():
         ctx.repository().create_new_table_alteration_migration(name="{0}_{1}".format(tablename, tablechange))
     else:
-        print("Migration Repository must be setup before creating migration scripts")
+        ctx.log("Migration Repository must be setup before creating migration scripts")

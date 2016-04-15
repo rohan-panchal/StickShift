@@ -1,8 +1,12 @@
 import os
 import sys
 import click
-from migration_repository import MigrationRepository
-from database_manager import DatabaseManager
+try:
+    from stickshift.migration_repository import MigrationRepository
+    from stickshift.database_manager import DatabaseManager
+except ImportError:
+    from migration_repository import MigrationRepository
+    from database_manager import DatabaseManager
 
 cmd_folder = os.path.abspath(os.path.dirname(__file__))
 
@@ -48,7 +52,7 @@ class ShellCLI(click.MultiCommand):
         try:
             if sys.version_info[0] == 2:
                 name = name.encode('ascii', 'replace')
-            mod = __import__("cmd_" + name, fromlist=['cli'])
+            mod = __import__("stickshift.cmd_" + name, fromlist=['cli'])
         except ImportError as error:
             return
         return mod.cli
